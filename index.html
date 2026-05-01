@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftBox Admin | Logistics Hub</title>
+    <style>
+        :root {
+            --primary: #1a237e;
+            --success: #4caf50;
+            --danger: #f44336;
+            --bg: #f4f7f6;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 30px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; border-bottom: 2px solid #ddd; padding-bottom: 20px; }
+        h1 { color: var(--primary); margin: 0; }
+        .stats { display: flex; gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex: 1; text-align: center; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; }
+        .locker-card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 8px 15px rgba(0,0,0,0.05); transition: transform 0.2s; border-top: 8px solid #ccc; }
+        .locker-card:hover { transform: translateY(-5px); }
+        .locker-id { font-size: 1.5em; font-weight: bold; color: var(--primary); margin-bottom: 10px; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; text-transform: uppercase; font-weight: bold; }
+        
+        /* Dynamic Status Colors */
+        .status-empty { background: #e8f5e9; color: var(--success); border-top-color: var(--success); }
+        .status-occupied { background: #ffebee; color: var(--danger); border-top-color: var(--danger); }
+        
+        .parcel-details { margin-top: 15px; font-size: 0.9em; color: #555; }
+        .label { font-weight: bold; color: #888; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>📦 SwiftBox Logistics Hub</h1>
+            <p>Institutional Monitoring System | Pagadian Capitol College</p>
+        </div>
+        <div id="connection-status" class="status-badge" style="background: #e3f2fd; color: #1565c0;">System Live</div>
+    </header>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div id="total-lockers" class="locker-id">0</div>
+            <div class="label">Total Lockers</div>
+        </div>
+        <div class="stat-card">
+            <div id="occupied-count" class="locker-id" style="color: var(--danger);">0</div>
+            <div class="label">Occupied</div>
+        </div>
+    </div>
+
+    <div id="locker-grid" class="grid">
+        </div>
+
+    <script>
+        async function fetchLockerData() {
+            try {
+                const response = await fetch('/api/lockers');
+                const lockers = await response.json();
+                renderLockers(lockers);
+            } catch (error) {
+                console.error("Sync Error:", error);
+                document.getElementById('connection-status').innerText = "Sync Error";
+                document.getElementById('connection-status').style.background = "#ffdada";
+            }
+        }
+
+        function renderLockers(lockers) {
+            const grid = document.getElementById('locker-grid');
+            grid.innerHTML = '';
+            
+            let occupied = 0;
+            const entries = Object.entries(lockers);
+
+            entries.forEach(([id, data]) => {
+                const isOccupied = data.status === 'OCCUPIED';
+                if (isOccupied) occupied++;
+
+                const card = document.createElement('div');
+                card.className = `locker-card ${isOccupied ? 'status-occupied' : 'status-empty'}`;
+                
+                card.innerHTML = `
+                    <div class="locker-id">${id}</div>
+                    <span class="status-badge">${data.status}</span>
+                    <div class="parcel-details">
+                        ${isOccupied ? `
+                            <div><span class="label">Parcel:</span> ${data.current_parcel || 'N/A'}</div>
+                            <div><span class="label">Recipient:</span> ${data.recipient_phone || '---'}</div>
+                            <div><span class="label">PIN:</span> ${data.claim_pin || '****'}</div>
+                        ` : 'Ready for delivery'}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('total-lockers').innerText = entries.length;
+            document.getElementById('occupied-count').innerText = occupied;
+        }
+
+        // Auto-refresh every 3 seconds for real-time feel
+        setInterval(fetchLockerData, 3000);
+        fetchLockerData();
+    </script>
+</body>
+</html>
